@@ -26,7 +26,7 @@ class State(object):
             if line[-1] == b'\n':
                 line = line[:-1]
             text = line.decode('utf-8', errors='replace')
-            self._print_tokens([(Token.Generic.Inserted, text)])
+            self._print_tokens([(Token.Generic.Inserted, text + '\n')])
         self.writer.close()
 
     async def _run_prompt(self):
