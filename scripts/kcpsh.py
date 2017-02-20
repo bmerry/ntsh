@@ -23,7 +23,7 @@ class State(object):
             line = await self.reader.readline()
             if line == b'':
                 break
-            if line[-1] == b'\n':
+            if line[-1:] == b'\n':
                 line = line[:-1]
             text = line.decode('utf-8', errors='replace')
             self._print_tokens([(Token.Generic.Inserted, text + '\n')])
@@ -55,7 +55,7 @@ class State(object):
 async def async_main():
     application = create_prompt_application(
         '(kcpsh) ',
-        enable_history_search=True,)
+        enable_history_search=True)
     with contextlib.closing(create_asyncio_eventloop()) as eventloop:
         cli = CommandLineInterface(application=application,
                                    eventloop=eventloop)
