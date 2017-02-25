@@ -7,6 +7,7 @@ from prompt_toolkit.styles import style_from_dict
 from prompt_toolkit.shortcuts import (
     create_asyncio_eventloop, create_prompt_application)
 from prompt_toolkit.token import Token
+from prompt_toolkit.buffer import AcceptAction
 from prompt_toolkit.layout.lexers import PygmentsLexer
 import pygments
 from .katcp_lexer import KatcpLexer
@@ -37,9 +38,16 @@ class State(object):
         self.writer = writer
         self.args = args
         self._lexer = KatcpLexer()
+        cli.application.buffer.accept_action = AcceptAction(self._accept_handler)
 
     def _print_tokens(self, tokens):
         self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens))
+
+    def _print_line(self, text):
+        tokens = pygments.lex(text, self._lexer)
+        if self.args.unescape:
+            tokens = unescape(tokens)
+        self._print_tokens(tokens)
 
     async def _run_reader(self):
         while True:
@@ -55,14 +63,17 @@ class State(object):
             self._print_tokens(tokens)
         self.writer.close()
 
+    def _accept_handler(self, cli, buffer):
+        text = buffer.document.text
+        self._print_line(text)
+        self.writer.writelines([text.encode('utf-8'), b'\n'])
+        buffer.reset(append_to_history=True)
+
     async def _run_prompt(self):
-        while True:
-            try:
-                command = (await self._cli.run_async()).text
-            except (EOFError, KeyboardInterrupt):
-                break
-            self.writer.writelines([command.encode('utf-8'), b'\n'])
-            await self.writer.drain()
+        try:
+            command = (await self._cli.run_async()).text
+        except (EOFError, KeyboardInterrupt):
+            pass
 
     async def run(self):
         done, pending = await asyncio.wait(
@@ -111,6 +122,7 @@ async def async_main():
     })
     application = create_prompt_application(
         '(kcpsh) ',
+        erase_when_done=True,
         enable_history_search=True,
         lexer=PygmentsLexer(KatcpLexer),
         style=style)
