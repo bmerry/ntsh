@@ -2,10 +2,12 @@ import sys
 import contextlib
 import asyncio
 from prompt_toolkit.interface import CommandLineInterface
+from prompt_toolkit.styles import style_from_dict
 from prompt_toolkit.shortcuts import (
     create_asyncio_eventloop, create_prompt_application)
 from prompt_toolkit.token import Token
 from prompt_toolkit.layout.lexers import PygmentsLexer
+import pygments
 from .katcp_lexer import KatcpLexer
 
 
@@ -14,6 +16,7 @@ class State(object):
         self._cli = cli
         self.reader = reader
         self.writer = writer
+        self._lexer = KatcpLexer()
 
     def _print_tokens(self, tokens):
         self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens))
@@ -25,8 +28,9 @@ class State(object):
                 break
             if line[-1:] == b'\n':
                 line = line[:-1]
-            text = line.decode('utf-8', errors='replace')
-            self._print_tokens([(Token.Generic.Inserted, text + '\n')])
+            text = line.decode('utf-8', errors='replace') + '\n'
+            tokens = pygments.lex(text, self._lexer)
+            self._print_tokens(tokens)
         self.writer.close()
 
     async def _run_prompt(self):
@@ -53,10 +57,22 @@ class State(object):
 
 
 async def async_main():
+    style = style_from_dict({
+        Token.Name.Request: '#ansifuchsia',
+        Token.Name.Reply: '#ansiturquoise',
+        Token.Name.Inform: '#ansidarkgray',
+        Token.String: '#ansilightgray',
+        Token.String.Escape: '#ansiwhite',
+        Token.Number: '#ansigreen',
+        Token.Number.Integer: '#ansigreen',
+        Token.Number.Float: '#ansigreen',
+        Token.Error: 'underline'
+    })
     application = create_prompt_application(
         '(kcpsh) ',
         enable_history_search=True,
-        lexer=PygmentsLexer(KatcpLexer))
+        lexer=PygmentsLexer(KatcpLexer),
+        style=style)
     with contextlib.closing(create_asyncio_eventloop()) as eventloop:
         cli = CommandLineInterface(application=application,
                                    eventloop=eventloop)
