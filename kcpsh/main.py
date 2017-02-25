@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import sys
 import contextlib
 import asyncio
@@ -7,6 +5,8 @@ from prompt_toolkit.interface import CommandLineInterface
 from prompt_toolkit.shortcuts import (
     create_asyncio_eventloop, create_prompt_application)
 from prompt_toolkit.token import Token
+from prompt_toolkit.layout.lexers import PygmentsLexer
+from .katcp_lexer import KatcpLexer
 
 
 class State(object):
@@ -55,7 +55,8 @@ class State(object):
 async def async_main():
     application = create_prompt_application(
         '(kcpsh) ',
-        enable_history_search=True)
+        enable_history_search=True,
+        lexer=PygmentsLexer(KatcpLexer))
     with contextlib.closing(create_asyncio_eventloop()) as eventloop:
         cli = CommandLineInterface(application=application,
                                    eventloop=eventloop)
