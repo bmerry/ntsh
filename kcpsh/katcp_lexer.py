@@ -23,7 +23,8 @@ class KatcpLexer(RegexLexer):
             (r'[ \t]+', Text, 'argument'),
         ],
         'argument': [
-            (r'(?<=[ \t])[+-]?[0-9]+(?=[ \t]|$)', Number.Int),
+            (r'(?<=[ \t])(?:0|-?[1-9][0-9]*)(?=[ \t]|$)', Number.Integer),
+            (r'(?<=[ \t])[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?=[ \t]|$)', Number.Float),
             (r'\\[\\_0nret@]', String.Escape),
             (r'[^\\ \0\n\r\033\t]+', String),
             default('#pop')
