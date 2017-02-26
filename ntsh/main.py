@@ -97,7 +97,7 @@ def endpoint(value):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Connect to a katcp server')
+    parser = argparse.ArgumentParser(description='Interact with a text-based TCP service')
     parser.add_argument('remote', type=endpoint, metavar='HOST:PORT',
                         help='Remote endpoint')
     parser.add_argument('-u', '--unescape', action='store_true',
