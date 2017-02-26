@@ -8,46 +8,23 @@ from prompt_toolkit.shortcuts import (
     create_asyncio_eventloop, create_prompt_application)
 from prompt_toolkit.token import Token
 from prompt_toolkit.buffer import AcceptAction
-from prompt_toolkit.layout.lexers import PygmentsLexer
-import pygments
-from .katcp_lexer import KatcpLexer
+from . import protocols, katcp
 
 
-def unescape(tokens):
-    escapes = {
-        r'\\': '\\',
-        r'\_': ' ',
-        r'\n': '\n',
-        r'\@': '',
-        r'\0': '\0',
-        r'\e': '\033',
-        r'\t': '\t',
-        r'\r': '\r'
-    }
-    for token, text in tokens:
-        if token is Token.String.Escape and text in escapes:
-            yield (Token.String, escapes[text])
-        else:
-            yield (token, text)
-
-
-class State(object):
-    def __init__(self, cli, reader, writer, args):
+class Main(object):
+    def __init__(self, cli, reader, writer, protocol):
         self._cli = cli
         self.reader = reader
         self.writer = writer
-        self.args = args
-        self._lexer = KatcpLexer()
-        cli.application.buffer.accept_action = AcceptAction(self._accept_handler)
+        self.protocol = protocol
+        cli.application.buffer.accept_action = \
+            AcceptAction(self._accept_handler)
 
     def _print_tokens(self, tokens):
         self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens))
 
-    def _print_line(self, text):
-        tokens = pygments.lex(text, self._lexer)
-        if self.args.unescape:
-            tokens = unescape(tokens)
-        self._print_tokens(tokens)
+    def _print_line(self, text, is_input):
+        self._print_tokens(self.protocol.lex(text, is_input))
 
     async def _run_reader(self):
         while True:
@@ -57,21 +34,18 @@ class State(object):
             if line[-1:] == b'\n':
                 line = line[:-1]
             text = line.decode('utf-8', errors='replace') + '\n'
-            tokens = pygments.lex(text, self._lexer)
-            if self.args.unescape:
-                tokens = unescape(tokens)
-            self._print_tokens(tokens)
+            self._print_line(text, True)
         self.writer.close()
 
     def _accept_handler(self, cli, buffer):
         text = buffer.document.text
-        self._print_line(text)
+        self._print_line(text + '\n', False)
         self.writer.writelines([text.encode('utf-8'), b'\n'])
         buffer.reset(append_to_history=True)
 
     async def _run_prompt(self):
         try:
-            command = (await self._cli.run_async()).text
+            await self._cli.run_async()
         except (EOFError, KeyboardInterrupt):
             pass
 
@@ -97,12 +71,18 @@ def endpoint(value):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Interactive tool for line-based TCP protocols')
+    parser = argparse.ArgumentParser(
+        description='Interactive tool for line-based TCP protocols')
     parser.add_argument('remote', type=endpoint, metavar='HOST:PORT',
                         help='Remote endpoint')
-    parser.add_argument('-u', '--unescape', action='store_true',
-                        help='Decode escape sequences when printing replies')
+    parser.add_argument('-p', '--protocol',
+                        metavar='PROTOCOL[:OPTION=VALUE...]',
+                        default='plain', help='Protocol [%(default)s]')
     args = parser.parse_args()
+    try:
+        args.protocol = protocols.get_protocol(args.protocol)
+    except ValueError as error:
+        parser.error(str(error))
     return args
 
 
@@ -124,7 +104,7 @@ async def async_main():
         '(ntsh) ',
         erase_when_done=True,
         enable_history_search=True,
-        lexer=PygmentsLexer(KatcpLexer),
+        lexer=args.protocol.lexer,
         style=style)
     with contextlib.closing(create_asyncio_eventloop()) as eventloop:
         cli = CommandLineInterface(application=application,
@@ -137,9 +117,9 @@ async def async_main():
                       args.remote[0], args.remote[1], error.strerror),
                   file=sys.stderr)
             return 1
-        state = State(cli, reader, writer, args)
+        main = Main(cli, reader, writer, args.protocol)
         with contextlib.closing(writer):
-            await state.run()
+            await main.run()
     return 0
 
 

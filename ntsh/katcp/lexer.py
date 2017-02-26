@@ -1,5 +1,5 @@
 from pygments.lexer import RegexLexer, bygroups, default
-from pygments.token import *
+from pygments.token import Name, Number, Text, Punctuation, String
 
 
 class KatcpLexer(RegexLexer):
@@ -24,7 +24,8 @@ class KatcpLexer(RegexLexer):
         ],
         'argument': [
             (r'(?<=[ \t])(?:0|-?[1-9][0-9]*)(?=[ \t]|$)', Number.Integer),
-            (r'(?<=[ \t])[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?=[ \t]|$)', Number.Float),
+            (r'(?<=[ \t])[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?=[ \t]|$)',
+                Number.Float),
             (r'\\[\\_0nret@]', String.Escape),
             (r'[^\\ \0\n\r\033\t]+', String),
             default('#pop')
