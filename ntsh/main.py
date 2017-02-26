@@ -24,7 +24,24 @@ class Main(object):
         self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens))
 
     def _print_line(self, text, is_input):
-        self._print_tokens(self.protocol.lex(text, is_input))
+        tokens = self.protocol.lex(text, is_input)
+        if is_input:
+            pre = [(Token.Generic.Deleted, '< ')]
+        else:
+            pre = [(Token.Generic.Inserted, '> ')]
+        # Insert pre at the beginning and before every newline.
+        out_tokens = []
+        newline = True
+        for token, data in tokens:
+            parts = data.splitlines(True)
+            first = True
+            for part in parts:
+                if newline:
+                    out_tokens.extend(pre)
+                    pre[0] = (pre[0][0], '+ ')  # Continuation line
+                out_tokens.append((token, part))
+                newline = len(part) > 0 and part[-1] == '\n'
+        self._print_tokens(out_tokens)
 
     async def _run_reader(self):
         while True:
@@ -90,6 +107,8 @@ async def async_main():
     args = parse_args()
 
     style = style_from_dict({
+        Token.Generic.Inserted: '#ansifuchsia',
+        Token.Generic.Deleted: '#ansiturquoise',
         Token.Name.Request: '#ansifuchsia',
         Token.Name.Reply: '#ansiturquoise',
         Token.Name.Inform: '#ansidarkgray',
