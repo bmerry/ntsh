@@ -121,7 +121,7 @@ async def async_main():
         Token.Error: 'underline'
     })
     application = create_prompt_application(
-        '(kcpsh) ',
+        '(ntsh) ',
         erase_when_done=True,
         enable_history_search=True,
         lexer=PygmentsLexer(KatcpLexer),
