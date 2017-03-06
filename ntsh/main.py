@@ -132,8 +132,7 @@ async def async_main():
         Token.String.Escape: '#ansiwhite',
         Token.Number: '#ansigreen',
         Token.Number.Integer: '#ansigreen',
-        Token.Number.Float: '#ansigreen',
-        Token.Error: 'underline'
+        Token.Number.Float: '#ansigreen'
     })
     application = create_prompt_application(
         '(ntsh) ',
