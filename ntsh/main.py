@@ -135,7 +135,7 @@ async def async_main():
         Token.Number.Float: '#ansigreen'
     })
     application = create_prompt_application(
-        '(ntsh) ',
+        '> ',
         erase_when_done=True,
         enable_history_search=True,
         lexer=args.protocol.lexer,
