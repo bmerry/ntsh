@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='ntsh',
     description='Interactive tool for line-based protocols',
     version='0.1',
-    packages=['ntsh'],
+    packages=find_packages(),
     install_requires=['prompt_toolkit', 'pygments'],
     python_requires='>=3.5',
     author='Bruce Merry',
