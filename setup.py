@@ -23,7 +23,7 @@ setup(
     description='Interactive tool for line-based protocols',
     version='0.1',
     packages=find_packages(),
-    install_requires=['prompt_toolkit', 'pygments'],
+    install_requires=['prompt_toolkit', 'pygments', 'appdirs'],
     python_requires='>=3.5',
     author='Bruce Merry',
     entry_points={

@@ -18,12 +18,15 @@ import argparse
 import sys
 import contextlib
 import asyncio
+import os
 from prompt_toolkit.interface import CommandLineInterface
 from prompt_toolkit.styles import style_from_dict
 from prompt_toolkit.shortcuts import (
     create_asyncio_eventloop, create_prompt_application)
 from prompt_toolkit.token import Token
 from prompt_toolkit.buffer import AcceptAction
+from prompt_toolkit.history import FileHistory
+import appdirs
 from . import protocols, katcp
 
 
@@ -142,6 +145,16 @@ def parse_args():
 async def async_main():
     args = parse_args()
 
+    cache_dir = appdirs.user_cache_dir('ntsh')
+    try:
+        os.makedirs(cache_dir)
+    except OSError:
+        pass
+    if os.path.isdir(cache_dir):
+        history = FileHistory(os.path.join(cache_dir, 'history'))
+    else:
+        history = None
+
     style = style_from_dict({
         Token.Generic.Inserted: '#ansifuchsia',
         Token.Generic.Deleted: '#ansiturquoise',
@@ -154,10 +167,12 @@ async def async_main():
         Token.Number.Integer: '#ansigreen',
         Token.Number.Float: '#ansigreen'
     })
+
     application = create_prompt_application(
         '> ',
         erase_when_done=True,
         enable_history_search=True,
+        history=history,
         lexer=args.protocol.lexer,
         style=style)
     with contextlib.closing(create_asyncio_eventloop()) as eventloop:
