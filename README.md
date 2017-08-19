@@ -10,7 +10,7 @@ the server won't interfere with the prompt.
 
 ntsh is a pure-Python package, although Python 3.5 is required. To install,
 unpack the source tarball (or pull from github), and in the source directory,
-run `pip install .` (or `pip3 install .`), if that is the path for your Python
+run `pip install .` (or `pip3 install .`, if that is the path for your Python
 3-compatible `pip`).
 
 ## Usage
@@ -21,7 +21,7 @@ ntsh host:port
 ```
 This makes no assumptions about protocol. To specify a protocol, pass it with
 `-p protocol[:options]`. At present the only supported protocol is
-[katcp](http://pythonhosted.org/katcp).
+[katcp](https://katcp-python.readthedocs.io/en/latest/).
 
 ## License
 
