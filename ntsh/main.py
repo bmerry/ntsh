@@ -30,22 +30,6 @@ import appdirs
 from . import protocols, katcp
 
 
-def _run_in_terminal(cli, *args, **kwargs):
-    """Wrapper around CommandLineInterface.run_in_terminal that does not
-    switch to cooked mode. This can be eliminated if and when
-    https://github.com/jonathanslenders/python-prompt-toolkit/pull/487
-    gets merged.
-    """
-    import unittest.mock as mock
-    from contextlib import contextmanager
-    @contextmanager
-    def cooked_mode():
-        yield
-
-    with mock.patch.object(cli.input, 'cooked_mode', cooked_mode):
-        cli.run_in_terminal(*args, **kwargs)
-
-
 class Main(object):
     def __init__(self, cli, reader, writer, protocol):
         self._cli = cli
@@ -56,7 +40,7 @@ class Main(object):
             AcceptAction(self._accept_handler)
 
     def _print_tokens(self, tokens):
-        _run_in_terminal(self._cli, lambda: self._cli.print_tokens(tokens))
+        self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens), cooked_mode=False)
 
     def _print_line(self, text, is_input):
         tokens = self.protocol.lex(text, is_input)
