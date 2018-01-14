@@ -19,6 +19,8 @@ import sys
 import contextlib
 import asyncio
 import os
+import codecs
+
 from prompt_toolkit.interface import CommandLineInterface
 from prompt_toolkit.styles import style_from_dict
 from prompt_toolkit.shortcuts import (
@@ -27,10 +29,36 @@ from prompt_toolkit.token import Token
 from prompt_toolkit.buffer import AcceptAction
 from prompt_toolkit.history import FileHistory
 import appdirs
+
 from . import protocols, katcp
 
 
-class Main(object):
+class _Printer:
+    def __init__(self, cli, protocol, is_input):
+        self.is_input = is_input
+        self._bol = True
+        self._cli = cli
+        self._protocol = protocol
+
+    def __call__(self, text):
+        if self.is_input:
+            pre = [(Token.Generic.Deleted, '< ')]
+        else:
+            pre = [(Token.Generic.Inserted, '> ')]
+        tokens = self._protocol.lex(text, self.is_input)
+        out_tokens = []
+        for token, data in tokens:
+            parts = data.splitlines(True)
+            for part in parts:
+                if self._bol:
+                    out_tokens.extend(pre)
+                    pre[0] = (pre[0][0], '+ ')  # Continuation line
+                out_tokens.append((token, part))
+                self._bol = part.endswith('\n')
+        self._cli.run_in_terminal(lambda: self._cli.print_tokens(out_tokens), cooked_mode=False)
+
+
+class Main:
     def __init__(self, cli, reader, writer, protocol):
         self._cli = cli
         self.reader = reader
@@ -39,43 +67,25 @@ class Main(object):
         cli.application.buffer.accept_action = \
             AcceptAction(self._accept_handler)
 
-    def _print_tokens(self, tokens):
-        self._cli.run_in_terminal(lambda: self._cli.print_tokens(tokens), cooked_mode=False)
-
-    def _print_line(self, text, is_input):
-        tokens = self.protocol.lex(text, is_input)
-        if is_input:
-            pre = [(Token.Generic.Deleted, '< ')]
-        else:
-            pre = [(Token.Generic.Inserted, '> ')]
-        # Insert pre at the beginning and before every newline.
-        out_tokens = []
-        newline = True
-        for token, data in tokens:
-            parts = data.splitlines(True)
-            first = True
-            for part in parts:
-                if newline:
-                    out_tokens.extend(pre)
-                    pre[0] = (pre[0][0], '+ ')  # Continuation line
-                out_tokens.append((token, part))
-                newline = len(part) > 0 and part[-1] == '\n'
-        self._print_tokens(out_tokens)
-
     async def _run_reader(self):
-        while True:
-            line = await self.reader.readline()
-            if line == b'':
-                break
-            if line[-1:] == b'\n':
-                line = line[:-1]
-            text = line.decode('utf-8', errors='replace') + '\n'
-            self._print_line(text, True)
+        printer = _Printer(self._cli, self.protocol, True)
+        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        eof = False
+        while not eof:
+            try:
+                line = await self.reader.readuntil()
+            except asyncio.IncompleteReadError as error:
+                line = error.partial
+                eof = True
+            except asyncio.LimitOverrunError as error:
+                line = await self.reader.readexactly(error.consumed)
+            text = decoder.decode(line, eof)
+            printer(text)
         self.writer.close()
 
     def _accept_handler(self, cli, buffer):
         text = buffer.document.text
-        self._print_line(text + '\n', False)
+        _Printer(self._cli, self.protocol, False)(text + '\n')
         self.writer.writelines([text.encode('utf-8'), b'\n'])
         buffer.reset(append_to_history=True)
 
@@ -164,7 +174,7 @@ async def async_main():
                                    eventloop=eventloop)
         sys.stdout = cli.stdout_proxy()
         try:
-            reader, writer = await asyncio.open_connection(*args.remote)
+            reader, writer = await asyncio.open_connection(*args.remote, limit=2**20)
         except OSError as error:
             print('Could not connect to {}:{}: {}'.format(
                       args.remote[0], args.remote[1], error.strerror),

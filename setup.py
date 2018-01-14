@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # ntsh: an interactive tool for line-based protocols
-# Copyright (C) 2017  Bruce Merry
+# Copyright (C) 2017, 2018  Bruce Merry
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
