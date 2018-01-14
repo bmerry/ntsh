@@ -23,6 +23,20 @@ This makes no assumptions about protocol. To specify a protocol, pass it with
 `-p protocol[:options]`. At present the only supported protocol is
 [katcp](https://katcp-python.readthedocs.io/en/latest/).
 
+## Revision history
+
+### 0.1.2
+
+- Fix crash when long lines are received from the remote (#2)
+
+### 0.1.1
+
+- Depend on prompt\_toolkit 1.0.15 instead of using an internal hack
+
+### 0.1
+
+- Initial release
+
 ## License
 
 This program is free software: you can redistribute it and/or modify
