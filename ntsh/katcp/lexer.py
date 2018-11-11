@@ -47,3 +47,29 @@ class KatcpLexer(RegexLexer):
             default('#pop')
         ]
     }
+
+    def __init__(self, **options):
+        super().__init__(**options)
+        self.unescape = options.get('unescape', False)
+
+    def get_tokens_unprocessed(self, text):
+        escapes = {
+            r'\\': '\\',
+            r'\_': ' ',
+            r'\n': '\n',
+            r'\@': '',
+            r'\0': '\0',
+            r'\e': '\033',
+            r'\t': '\t',
+            r'\r': '\r'
+        }
+
+        orig = super().get_tokens_unprocessed(text)
+        if self.unescape:
+            for index, tokentype, value in orig:
+                if tokentype is String.Escape and value in escapes:
+                    yield (index, String, escapes[value])
+                else:
+                    yield (index, tokentype, value)
+        else:
+            yield from orig

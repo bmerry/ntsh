@@ -21,54 +21,79 @@ import asyncio
 import os
 import codecs
 
-from prompt_toolkit.interface import CommandLineInterface
-from prompt_toolkit.styles import style_from_dict
-from prompt_toolkit.shortcuts import (
-    create_asyncio_eventloop, create_prompt_application)
-from prompt_toolkit.token import Token
-from prompt_toolkit.buffer import AcceptAction
+from prompt_toolkit.styles import style_from_pygments_dict
+from prompt_toolkit.eventloop import use_asyncio_event_loop
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.shortcuts import PromptSession, print_formatted_text
+from prompt_toolkit.formatted_text import PygmentsTokens
+from prompt_toolkit.application import run_in_terminal
+from pygments.token import Token
 import appdirs
 
-from . import protocols, katcp
+from . import protocols
+# Protocols are not called directly, but they register themselves on import
+from . import katcp       # noqa: F401
+
+
+STYLE = style_from_pygments_dict({
+    Token.Generic.Inserted: '#ansifuchsia',
+    Token.Generic.Deleted: '#ansiturquoise',
+    Token.Name.Request: '#ansifuchsia',
+    Token.Name.Reply: '#ansiturquoise',
+    Token.Name.Inform: '#ansidarkgray',
+    Token.String: '#ansilightgray',
+    Token.String.Escape: '#ansiwhite',
+    Token.Number: '#ansigreen',
+    Token.Number.Integer: '#ansigreen',
+    Token.Number.Float: '#ansigreen'
+})
 
 
 class _Printer:
-    def __init__(self, cli, protocol, is_input):
+    def __init__(self, protocol, is_input):
         self.is_input = is_input
         self._bol = True
-        self._cli = cli
-        self._protocol = protocol
+        self._lexer = protocol.input_lexer if is_input \
+            else protocol.output_lexer
 
     def __call__(self, text):
         if self.is_input:
             pre = [(Token.Generic.Deleted, '< ')]
         else:
             pre = [(Token.Generic.Inserted, '> ')]
-        tokens = self._protocol.lex(text, self.is_input)
+        tokens = self._lexer.get_tokens_unprocessed(text)
         out_tokens = []
-        for token, data in tokens:
+        for _, token, data in tokens:
             parts = data.splitlines(True)
             for part in parts:
                 if self._bol:
                     out_tokens.extend(pre)
                     pre[0] = (pre[0][0], '+ ')  # Continuation line
+                # prompt_toolkit asserts that \r is not present.
+                # To allow for receiving \r\n from the network,
+                # strip out all \r.
+                part = part.replace('\r', '')
                 out_tokens.append((token, part))
                 self._bol = part.endswith('\n')
-        self._cli.run_in_terminal(lambda: self._cli.print_tokens(out_tokens), cooked_mode=False)
+
+        def printit():
+            print_formatted_text(PygmentsTokens(out_tokens), end='',
+                                 style=STYLE,
+                                 include_default_pygments_style=False)
+
+        run_in_terminal(printit)
 
 
 class Main:
-    def __init__(self, cli, reader, writer, protocol):
-        self._cli = cli
+    def __init__(self, session, reader, writer, protocol):
+        self.session = session
         self.reader = reader
         self.writer = writer
         self.protocol = protocol
-        cli.application.buffer.accept_action = \
-            AcceptAction(self._accept_handler)
 
     async def _run_reader(self):
-        printer = _Printer(self._cli, self.protocol, True)
+        printer = _Printer(self.protocol, True)
         decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         eof = False
         while not eof:
@@ -83,17 +108,33 @@ class Main:
             printer(text)
         self.writer.close()
 
-    def _accept_handler(self, cli, buffer):
-        text = buffer.document.text
-        _Printer(self._cli, self.protocol, False)(text + '\n')
-        self.writer.writelines([text.encode('utf-8'), b'\n'])
-        buffer.reset(append_to_history=True)
+    async def _get_input(self):
+        with patch_stdout():
+            try:
+                return await self.session.prompt(async_=True)
+            except KeyboardInterrupt:
+                # KeyboardInterrupt isn't a subclass of Exception, so
+                # it doesn't propagate through asyncio quite right.
+                # Turn it into an EOFError instead.
+                raise EOFError
 
     async def _run_prompt(self):
-        try:
-            await self._cli.run_async()
-        except (EOFError, KeyboardInterrupt):
-            pass
+        while True:
+            future = asyncio.get_event_loop().create_task(self._get_input())
+            try:
+                # shield to work around
+                # https://github.com/prompt-toolkit/python-prompt-toolkit/issues/787
+                text = await asyncio.shield(future)
+            except EOFError:
+                break
+            except asyncio.CancelledError:
+                # Make the prompt exit cleanly (important to restore
+                # terminal settings).
+                self.session.app.exit(result='', style='class:exiting')
+                await future
+                raise
+            _Printer(self.protocol, False)(text + '\n')
+            self.writer.writelines([text.encode('utf-8'), b'\n'])
 
     async def run(self):
         futures = [self._run_reader(), self._run_prompt()]
@@ -101,10 +142,6 @@ class Main:
             futures, return_when=asyncio.FIRST_COMPLETED)
         for future in done:
             await future
-        # If the network socket finished first, given the prompt time to
-        # absorb any CPR responses.
-        if futures[1] not in done:
-            await asyncio.sleep(0.1)
         for future in pending:
             future.cancel()
             try:
@@ -149,44 +186,31 @@ async def async_main():
     else:
         history = None
 
-    style = style_from_dict({
-        Token.Generic.Inserted: '#ansifuchsia',
-        Token.Generic.Deleted: '#ansiturquoise',
-        Token.Name.Request: '#ansifuchsia',
-        Token.Name.Reply: '#ansiturquoise',
-        Token.Name.Inform: '#ansidarkgray',
-        Token.String: '#ansilightgray',
-        Token.String.Escape: '#ansiwhite',
-        Token.Number: '#ansigreen',
-        Token.Number.Integer: '#ansigreen',
-        Token.Number.Float: '#ansigreen'
-    })
+    try:
+        reader, writer = await asyncio.open_connection(*args.remote,
+                                                       limit=2**20)
+    except OSError as error:
+        print('Could not connect to {}:{}: {}'.format(
+                  args.remote[0], args.remote[1], error.strerror),
+              file=sys.stderr)
+        return 1
 
-    application = create_prompt_application(
+    session = PromptSession(
         '> ',
         erase_when_done=True,
         enable_history_search=True,
         history=history,
-        lexer=args.protocol.lexer,
-        style=style)
-    with contextlib.closing(create_asyncio_eventloop()) as eventloop:
-        cli = CommandLineInterface(application=application,
-                                   eventloop=eventloop)
-        sys.stdout = cli.stdout_proxy()
-        try:
-            reader, writer = await asyncio.open_connection(*args.remote, limit=2**20)
-        except OSError as error:
-            print('Could not connect to {}:{}: {}'.format(
-                      args.remote[0], args.remote[1], error.strerror),
-                  file=sys.stderr)
-            return 1
-        main = Main(cli, reader, writer, args.protocol)
-        with contextlib.closing(writer):
-            await main.run()
+        lexer=args.protocol.prompt_lexer,
+        style=STYLE,
+        include_default_pygments_style=False)
+    main = Main(session, reader, writer, args.protocol)
+    with contextlib.closing(writer):
+        await main.run()
     return 0
 
 
 def main():
+    use_asyncio_event_loop()
     loop = asyncio.get_event_loop()
     with contextlib.closing(loop):
         return loop.run_until_complete(async_main())

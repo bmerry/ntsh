@@ -14,11 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pygments
-from prompt_toolkit.token import Token
-from prompt_toolkit.layout.lexers import PygmentsLexer
 from .. import protocols
 from .lexer import KatcpLexer
+
+from prompt_toolkit.lexers import PygmentsLexer
 
 
 class KatcpProtocol(protocols.Protocol):
@@ -26,34 +25,13 @@ class KatcpProtocol(protocols.Protocol):
         'unescape': protocols.Argument(bool)
     }
 
-    @classmethod
-    def _unescape(cls, tokens):
-        escapes = {
-            r'\\': '\\',
-            r'\_': ' ',
-            r'\n': '\n',
-            r'\@': '',
-            r'\0': '\0',
-            r'\e': '\033',
-            r'\t': '\t',
-            r'\r': '\r'
-        }
-        for token, text in tokens:
-            if token is Token.String.Escape and text in escapes:
-                yield (Token.String, escapes[text])
-            else:
-                yield (token, text)
-
     def __init__(self, name, arglist):
         self.unescape = False
-        super(KatcpProtocol, self).__init__(name, arglist)
-        self.lexer = PygmentsLexer(KatcpLexer)
-
-    def lex(self, text, is_input):
-        tokens = pygments.lex(text, self.lexer.pygments_lexer)
-        if self.unescape:
-            tokens = self._unescape(tokens)
-        return tokens
+        super().__init__(name, arglist)
+        self.prompt_lexer = PygmentsLexer(KatcpLexer)
+        self.input_lexer = self.output_lexer = KatcpLexer(
+            stripnl=False, stripall=False, ensurenl=False,
+            unescape=self.unescape)
 
 
 protocols.PROTOCOLS['katcp'] = KatcpProtocol

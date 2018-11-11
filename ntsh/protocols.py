@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from prompt_toolkit.token import Token
-from prompt_toolkit.layout.lexers import SimpleLexer
+from prompt_toolkit.lexers import SimpleLexer
+from pygments.lexers.special import TextLexer
 
 
 class ProtocolArgumentError(ValueError):
@@ -24,7 +24,7 @@ class ProtocolArgumentError(ValueError):
 
 class UnknownProtocolArgument(ProtocolArgumentError):
     def __init__(self, protocol, key):
-        super(UnknownProtocolArgument, self).__init__()
+        super().__init__()
         self.protocol = protocol
         self.key = key
 
@@ -35,7 +35,7 @@ class UnknownProtocolArgument(ProtocolArgumentError):
 
 class MissingArgumentValue(ProtocolArgumentError):
     def __init__(self, protocol, key):
-        super(UnknownProtocolArgument, self).__init__()
+        super().__init__()
         self.protocol = protocol
         self.key = key
 
@@ -46,7 +46,7 @@ class MissingArgumentValue(ProtocolArgumentError):
 
 class InvalidProtocolArgument(ProtocolArgumentError):
     def __init__(self, protocol, key, value):
-        super(InvalidProtocolArgument, self).__init__()
+        super().__init__()
         self.protocol = protocol
         self.key = key
         self.value = value
@@ -74,7 +74,9 @@ class Protocol(object):
 
     def __init__(self, name, arglist):
         self.name = name
-        self.lexer = SimpleLexer(Token.Text)
+        self.prompt_lexer = SimpleLexer()
+        self.input_lexer = self.output_lexer = TextLexer(
+            stripnl=False, stripall=False, ensurenl=False)
         for item in arglist:
             parts = item.split('=', 1)
             key = parts[0]
@@ -93,9 +95,6 @@ class Protocol(object):
                     raise InvalidProtocolArgument(self, key, parts[1]) \
                         from error
             setattr(self, key, value)
-
-    def lex(self, text, is_input):
-        return [(Token.Text, text)]
 
 
 PROTOCOLS = {'plain': Protocol}
