@@ -25,6 +25,10 @@ This makes no assumptions about protocol. To specify a protocol, pass it with
 
 ## Revision history
 
+### 1.0
+
+- Switch to prompt\_toolkit 2
+
 ### 0.1.2
 
 - Fix crash when long lines are received from the remote (#2)
