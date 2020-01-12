@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # ntsh: an interactive tool for line-based protocols
-# Copyright (C) 2017, 2018  Bruce Merry
+# Copyright (C) 2017, 2018, 2020  Bruce Merry
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@ from setuptools import setup, find_packages
 setup(
     name='ntsh',
     description='Interactive tool for line-based protocols',
-    version='1.0',
+    version='1.1',
     packages=find_packages(),
-    install_requires=['prompt_toolkit>=2,<3', 'pygments', 'appdirs'],
-    python_requires='>=3.5',
+    install_requires=['prompt_toolkit>=3,<4', 'pygments', 'appdirs'],
+    python_requires='>=3.6',
     author='Bruce Merry',
     entry_points={
         'console_scripts': [

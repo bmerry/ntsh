@@ -8,7 +8,7 @@ the server won't interfere with the prompt.
 
 ## Installation
 
-ntsh is a pure-Python package, although Python 3.5 is required. To install,
+ntsh is a pure-Python package, although Python 3.6 is required. To install,
 unpack the source tarball (or pull from github), and in the source directory,
 run `pip install .` (or `pip3 install .`, if that is the path for your Python
 3-compatible `pip`).
@@ -24,6 +24,10 @@ This makes no assumptions about protocol. To specify a protocol, pass it with
 [katcp](https://katcp-python.readthedocs.io/en/latest/).
 
 ## Revision history
+
+### 1.1
+
+- Switch to prompt\_toolkit 3
 
 ### 1.0
 

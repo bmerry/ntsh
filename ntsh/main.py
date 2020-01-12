@@ -1,5 +1,5 @@
 # ntsh: an interactive tool for line-based protocols
-# Copyright (C) 2017, 2018  Bruce Merry
+# Copyright (C) 2017, 2018, 2020  Bruce Merry
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@ import os
 import codecs
 
 from prompt_toolkit.styles import style_from_pygments_dict
-from prompt_toolkit.eventloop import use_asyncio_event_loop
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession, print_formatted_text
@@ -111,7 +110,7 @@ class Main:
     async def _get_input(self):
         with patch_stdout():
             try:
-                return await self.session.prompt(async_=True)
+                return await self.session.prompt_async()
             except KeyboardInterrupt:
                 # KeyboardInterrupt isn't a subclass of Exception, so
                 # it doesn't propagate through asyncio quite right.
@@ -210,7 +209,6 @@ async def async_main():
 
 
 def main():
-    use_asyncio_event_loop()
     loop = asyncio.get_event_loop()
     with contextlib.closing(loop):
         return loop.run_until_complete(async_main())
