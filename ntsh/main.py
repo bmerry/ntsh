@@ -58,9 +58,8 @@ class _Printer:
             else protocol.output_lexer
 
     def __call__(self, text):
-        lines = text.splitlines(True)
         out_tokens = []
-        for line in text:
+        for line in text.splitlines(True):
             if self.is_input:
                 pre = [(Token.Generic.Deleted, '< ')]
             else:
@@ -105,14 +104,15 @@ class Main:
                 eof = True
             data = prefix + data
             last_newline = data.rfind(b'\n')
-            if not eof and last_newline != -1:
+            if not eof and (len(data) < LIMIT or last_newline != -1):
                 # Cut at a newline, to help any parsing
                 prefix = data[last_newline + 1 :]
                 data = data[: last_newline + 1]
             else:
                 prefix = b''
-            text = decoder.decode(data, eof)
-            printer(text)
+            if data is not None:
+                text = decoder.decode(data, eof)
+                printer(text)
         self.writer.close()
 
     async def _get_input(self):
