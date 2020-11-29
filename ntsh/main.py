@@ -47,6 +47,7 @@ STYLE = style_from_pygments_dict({
     Token.Number.Integer: '#ansigreen',
     Token.Number.Float: '#ansigreen'
 })
+LIMIT = 2**20
 
 
 class _Printer:
@@ -57,24 +58,26 @@ class _Printer:
             else protocol.output_lexer
 
     def __call__(self, text):
-        if self.is_input:
-            pre = [(Token.Generic.Deleted, '< ')]
-        else:
-            pre = [(Token.Generic.Inserted, '> ')]
-        tokens = self._lexer.get_tokens_unprocessed(text)
+        lines = text.splitlines(True)
         out_tokens = []
-        for _, token, data in tokens:
-            parts = data.splitlines(True)
-            for part in parts:
-                if self._bol:
-                    out_tokens.extend(pre)
-                    pre[0] = (pre[0][0], '+ ')  # Continuation line
-                # prompt_toolkit asserts that \r is not present.
-                # To allow for receiving \r\n from the network,
-                # strip out all \r.
-                part = part.replace('\r', '')
-                out_tokens.append((token, part))
-                self._bol = part.endswith('\n')
+        for line in text:
+            if self.is_input:
+                pre = [(Token.Generic.Deleted, '< ')]
+            else:
+                pre = [(Token.Generic.Inserted, '> ')]
+            tokens = self._lexer.get_tokens_unprocessed(line)
+            for _, token, data in tokens:
+                parts = data.splitlines(True)
+                for part in parts:
+                    if self._bol:
+                        out_tokens.extend(pre)
+                        pre[0] = (pre[0][0], '+ ')  # Continuation line
+                    # prompt_toolkit asserts that \r is not present.
+                    # To allow for receiving \r\n from the network,
+                    # strip out all \r.
+                    part = part.replace('\r', '')
+                    out_tokens.append((token, part))
+                    self._bol = part.endswith('\n')
 
         def printit():
             print_formatted_text(PygmentsTokens(out_tokens), end='',
@@ -95,15 +98,20 @@ class Main:
         printer = _Printer(self.protocol, True)
         decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         eof = False
+        prefix = b''
         while not eof:
-            try:
-                line = await self.reader.readuntil()
-            except asyncio.IncompleteReadError as error:
-                line = error.partial
+            data = await self.reader.read(LIMIT)
+            if data == b'':
                 eof = True
-            except asyncio.LimitOverrunError as error:
-                line = await self.reader.readexactly(error.consumed)
-            text = decoder.decode(line, eof)
+            data = prefix + data
+            last_newline = data.rfind(b'\n')
+            if not eof and last_newline != -1:
+                # Cut at a newline, to help any parsing
+                prefix = data[last_newline + 1 :]
+                data = data[: last_newline + 1]
+            else:
+                prefix = b''
+            text = decoder.decode(data, eof)
             printer(text)
         self.writer.close()
 
@@ -187,7 +195,7 @@ async def async_main():
 
     try:
         reader, writer = await asyncio.open_connection(*args.remote,
-                                                       limit=2**20)
+                                                       limit=LIMIT)
     except OSError as error:
         print('Could not connect to {}:{}: {}'.format(
                   args.remote[0], args.remote[1], error.strerror),
