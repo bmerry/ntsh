@@ -21,7 +21,7 @@ from setuptools import setup, find_packages
 setup(
     name='ntsh',
     description='Interactive tool for line-based protocols',
-    version='1.1',
+    version='1.1.1',
     packages=find_packages(),
     install_requires=['prompt_toolkit>=3,<4', 'pygments', 'appdirs'],
     python_requires='>=3.6',

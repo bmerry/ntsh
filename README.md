@@ -25,6 +25,10 @@ This makes no assumptions about protocol. To specify a protocol, pass it with
 
 ## Revision history
 
+### 1.1.1
+
+- Optimise printing of responses with many lines
+
 ### 1.1
 
 - Switch to prompt\_toolkit 3
