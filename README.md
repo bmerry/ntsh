@@ -25,6 +25,10 @@ This makes no assumptions about protocol. To specify a protocol, pass it with
 
 ## Revision history
 
+### 1.1.2
+
+- Fix output syntax highlight (regression in 1.1.1)
+
 ### 1.1.1
 
 - Optimise printing of responses with many lines
