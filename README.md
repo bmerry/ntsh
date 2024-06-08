@@ -8,10 +8,7 @@ the server won't interfere with the prompt.
 
 ## Installation
 
-ntsh is a pure-Python package, although Python 3.6 is required. To install,
-unpack the source tarball (or pull from github), and in the source directory,
-run `pip install .` (or `pip3 install .`, if that is the path for your Python
-3-compatible `pip`).
+ntsh is a pure-Python package. To install, run `pip install ntsh`.
 
 ## Usage
 
@@ -19,11 +16,18 @@ To connect to a remote host *host* on port *port*, run
 ```sh
 ntsh host:port
 ```
-This makes no assumptions about protocol. To specify a protocol, pass it with
-`-p protocol[:options]`. At present the only supported protocol is
+This makes no assumptions about protocol. To specify a protocol (which will
+enable syntax highlighting), pass it with `-p protocol[:options]`. At present
+the only supported protocol is
 [katcp](https://katcp-python.readthedocs.io/en/latest/).
 
 ## Revision history
+
+### 1.1.1
+
+- Fix to support Python 3.12.
+- Bump minimum Python version to 3.8.
+- Replace setup.py with pyproject.toml.
 
 ### 1.1
 

@@ -1,5 +1,5 @@
 # ntsh: an interactive tool for line-based protocols
-# Copyright (C) 2017, 2018, 2020  Bruce Merry
+# Copyright (C) 2017, 2018, 2020, 2024  Bruce Merry
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -136,7 +136,10 @@ class Main:
             self.writer.writelines([text.encode('utf-8'), b'\n'])
 
     async def run(self):
-        futures = [self._run_reader(), self._run_prompt()]
+        futures = [
+            asyncio.create_task(self._run_reader()),
+            asyncio.create_task(self._run_prompt())
+        ]
         done, pending = await asyncio.wait(
             futures, return_when=asyncio.FIRST_COMPLETED)
         for future in done:

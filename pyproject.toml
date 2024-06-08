@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[project]
+name = "ntsh"
+dynamic = ["version"]
+authors = [{name = "Bruce Merry"}]
+description = "Interactive tool for line-based protocols"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "prompt_toolkit>=3,<4",
+    "pygments",
+    "appdirs",
+]
+license = {text = "GPLv3+"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: System :: Networking",
+]
+
+[project.scripts]
+ntsh = "ntsh.main:main"
