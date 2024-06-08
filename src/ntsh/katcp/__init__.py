@@ -21,17 +21,15 @@ from prompt_toolkit.lexers import PygmentsLexer
 
 
 class KatcpProtocol(protocols.Protocol):
-    ARGS = {
-        'unescape': protocols.Argument(bool)
-    }
+    ARGS = {"unescape": protocols.Argument(bool)}
 
     def __init__(self, name, arglist):
         self.unescape = False
         super().__init__(name, arglist)
         self.prompt_lexer = PygmentsLexer(KatcpLexer)
         self.input_lexer = self.output_lexer = KatcpLexer(
-            stripnl=False, stripall=False, ensurenl=False,
-            unescape=self.unescape)
+            stripnl=False, stripall=False, ensurenl=False, unescape=self.unescape
+        )
 
 
-protocols.PROTOCOLS['katcp'] = KatcpProtocol
+protocols.PROTOCOLS["katcp"] = KatcpProtocol

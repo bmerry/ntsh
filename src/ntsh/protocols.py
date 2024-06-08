@@ -30,7 +30,8 @@ class UnknownProtocolArgument(ProtocolArgumentError):
 
     def __str__(self):
         return "'{}' is not a valid argument for protocol {}".format(
-            self.key, self.protocol.name)
+            self.key, self.protocol.name
+        )
 
 
 class MissingArgumentValue(ProtocolArgumentError):
@@ -41,7 +42,8 @@ class MissingArgumentValue(ProtocolArgumentError):
 
     def __str__(self):
         return "Argument '{}' for protocol {} requires a value".format(
-            self.key, self.protocol.name)
+            self.key, self.protocol.name
+        )
 
 
 class InvalidProtocolArgument(ProtocolArgumentError):
@@ -53,7 +55,8 @@ class InvalidProtocolArgument(ProtocolArgumentError):
 
     def __str__(self):
         return "'{}' is not a valid value for {} in protocol {}".format(
-            self.value, self.key, self.protocol.name)
+            self.value, self.key, self.protocol.name
+        )
 
 
 class UnknownProtocolError(ValueError):
@@ -76,9 +79,10 @@ class Protocol(object):
         self.name = name
         self.prompt_lexer = SimpleLexer()
         self.input_lexer = self.output_lexer = TextLexer(
-            stripnl=False, stripall=False, ensurenl=False)
+            stripnl=False, stripall=False, ensurenl=False
+        )
         for item in arglist:
-            parts = item.split('=', 1)
+            parts = item.split("=", 1)
             key = parts[0]
             if key not in self.ARGS:
                 raise UnknownProtocolArgument(self, key)
@@ -92,16 +96,15 @@ class Protocol(object):
                 try:
                     value = arg.type(parts[1])
                 except TypeError as error:
-                    raise InvalidProtocolArgument(self, key, parts[1]) \
-                        from error
+                    raise InvalidProtocolArgument(self, key, parts[1]) from error
             setattr(self, key, value)
 
 
-PROTOCOLS = {'plain': Protocol}
+PROTOCOLS = {"plain": Protocol}
 
 
 def get_protocol(value):
-    fields = value.split(':')
+    fields = value.split(":")
     name = fields[0]
     try:
         protocol_cls = PROTOCOLS[name]

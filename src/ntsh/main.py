@@ -31,36 +31,38 @@ from pygments.token import Token
 import appdirs
 
 from . import protocols
+
 # Protocols are not called directly, but they register themselves on import
-from . import katcp       # noqa: F401
+from . import katcp  # noqa: F401
 
 
-STYLE = style_from_pygments_dict({
-    Token.Generic.Inserted: '#ansifuchsia',
-    Token.Generic.Deleted: '#ansiturquoise',
-    Token.Name.Request: '#ansifuchsia',
-    Token.Name.Reply: '#ansiturquoise',
-    Token.Name.Inform: '#ansidarkgray',
-    Token.String: '#ansilightgray',
-    Token.String.Escape: '#ansiwhite',
-    Token.Number: '#ansigreen',
-    Token.Number.Integer: '#ansigreen',
-    Token.Number.Float: '#ansigreen'
-})
+STYLE = style_from_pygments_dict(
+    {
+        Token.Generic.Inserted: "#ansifuchsia",
+        Token.Generic.Deleted: "#ansiturquoise",
+        Token.Name.Request: "#ansifuchsia",
+        Token.Name.Reply: "#ansiturquoise",
+        Token.Name.Inform: "#ansidarkgray",
+        Token.String: "#ansilightgray",
+        Token.String.Escape: "#ansiwhite",
+        Token.Number: "#ansigreen",
+        Token.Number.Integer: "#ansigreen",
+        Token.Number.Float: "#ansigreen",
+    }
+)
 
 
 class _Printer:
     def __init__(self, protocol, is_input):
         self.is_input = is_input
         self._bol = True
-        self._lexer = protocol.input_lexer if is_input \
-            else protocol.output_lexer
+        self._lexer = protocol.input_lexer if is_input else protocol.output_lexer
 
     def __call__(self, text):
         if self.is_input:
-            pre = [(Token.Generic.Deleted, '< ')]
+            pre = [(Token.Generic.Deleted, "< ")]
         else:
-            pre = [(Token.Generic.Inserted, '> ')]
+            pre = [(Token.Generic.Inserted, "> ")]
         tokens = self._lexer.get_tokens_unprocessed(text)
         out_tokens = []
         for _, token, data in tokens:
@@ -68,18 +70,21 @@ class _Printer:
             for part in parts:
                 if self._bol:
                     out_tokens.extend(pre)
-                    pre[0] = (pre[0][0], '+ ')  # Continuation line
+                    pre[0] = (pre[0][0], "+ ")  # Continuation line
                 # prompt_toolkit asserts that \r is not present.
                 # To allow for receiving \r\n from the network,
                 # strip out all \r.
-                part = part.replace('\r', '')
+                part = part.replace("\r", "")
                 out_tokens.append((token, part))
-                self._bol = part.endswith('\n')
+                self._bol = part.endswith("\n")
 
         def printit():
-            print_formatted_text(PygmentsTokens(out_tokens), end='',
-                                 style=STYLE,
-                                 include_default_pygments_style=False)
+            print_formatted_text(
+                PygmentsTokens(out_tokens),
+                end="",
+                style=STYLE,
+                include_default_pygments_style=False,
+            )
 
         run_in_terminal(printit)
 
@@ -93,7 +98,7 @@ class Main:
 
     async def _run_reader(self):
         printer = _Printer(self.protocol, True)
-        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         eof = False
         while not eof:
             try:
@@ -129,19 +134,18 @@ class Main:
             except asyncio.CancelledError:
                 # Make the prompt exit cleanly (important to restore
                 # terminal settings).
-                self.session.app.exit(result='', style='class:exiting')
+                self.session.app.exit(result="", style="class:exiting")
                 await future
                 raise
-            _Printer(self.protocol, False)(text + '\n')
-            self.writer.writelines([text.encode('utf-8'), b'\n'])
+            _Printer(self.protocol, False)(text + "\n")
+            self.writer.writelines([text.encode("utf-8"), b"\n"])
 
     async def run(self):
         futures = [
             asyncio.create_task(self._run_reader()),
-            asyncio.create_task(self._run_prompt())
+            asyncio.create_task(self._run_prompt()),
         ]
-        done, pending = await asyncio.wait(
-            futures, return_when=asyncio.FIRST_COMPLETED)
+        done, pending = await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
         for future in done:
             await future
         for future in pending:
@@ -153,20 +157,26 @@ class Main:
 
 
 def endpoint(value):
-    colon = value.rfind(':')
+    colon = value.rfind(":")
     if colon == -1:
-        raise ValueError(': not found')
-    return value[:colon], value[colon + 1:]
+        raise ValueError(": not found")
+    return value[:colon], value[colon + 1 :]
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Interactive tool for line-based TCP protocols')
-    parser.add_argument('remote', type=endpoint, metavar='HOST:PORT',
-                        help='Remote endpoint')
-    parser.add_argument('-p', '--protocol',
-                        metavar='PROTOCOL[:OPTION=VALUE...]',
-                        default='plain', help='Protocol [%(default)s]')
+        description="Interactive tool for line-based TCP protocols"
+    )
+    parser.add_argument(
+        "remote", type=endpoint, metavar="HOST:PORT", help="Remote endpoint"
+    )
+    parser.add_argument(
+        "-p",
+        "--protocol",
+        metavar="PROTOCOL[:OPTION=VALUE...]",
+        default="plain",
+        help="Protocol [%(default)s]",
+    )
     args = parser.parse_args()
     try:
         args.protocol = protocols.get_protocol(args.protocol)
@@ -178,33 +188,36 @@ def parse_args():
 async def async_main():
     args = parse_args()
 
-    cache_dir = appdirs.user_cache_dir('ntsh')
+    cache_dir = appdirs.user_cache_dir("ntsh")
     try:
         os.makedirs(cache_dir)
     except OSError:
         pass
     if os.path.isdir(cache_dir):
-        history = FileHistory(os.path.join(cache_dir, 'history'))
+        history = FileHistory(os.path.join(cache_dir, "history"))
     else:
         history = None
 
     try:
-        reader, writer = await asyncio.open_connection(*args.remote,
-                                                       limit=2**20)
+        reader, writer = await asyncio.open_connection(*args.remote, limit=2**20)
     except OSError as error:
-        print('Could not connect to {}:{}: {}'.format(
-                  args.remote[0], args.remote[1], error.strerror),
-              file=sys.stderr)
+        print(
+            "Could not connect to {}:{}: {}".format(
+                args.remote[0], args.remote[1], error.strerror
+            ),
+            file=sys.stderr,
+        )
         return 1
 
     session = PromptSession(
-        '> ',
+        "> ",
         erase_when_done=True,
         enable_history_search=True,
         history=history,
         lexer=args.protocol.prompt_lexer,
         style=STYLE,
-        include_default_pygments_style=False)
+        include_default_pygments_style=False,
+    )
     main = Main(session, reader, writer, args.protocol)
     with contextlib.closing(writer):
         await main.run()
@@ -217,5 +230,5 @@ def main():
         return loop.run_until_complete(async_main())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

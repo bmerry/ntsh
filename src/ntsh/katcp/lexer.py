@@ -19,49 +19,53 @@ from pygments.token import Name, Number, Text, Punctuation, String
 
 
 class KatcpLexer(RegexLexer):
-    name = 'Katcp'
+    name = "Katcp"
 
     tokens = {
-        'root': [
-            (r'\?[A-Za-z][A-Za-z0-9-]*', Name.Request, ('body', 'msgid')),
-            (r'![A-Za-z][A-Za-z0-9-]*', Name.Reply, ('body', 'msgid')),
-            (r'#[A-Za-z][A-Za-z0-9-]*', Name.Inform, ('body', 'msgid')),
-            (r'\n', Text),
+        "root": [
+            (r"\?[A-Za-z][A-Za-z0-9-]*", Name.Request, ("body", "msgid")),
+            (r"![A-Za-z][A-Za-z0-9-]*", Name.Reply, ("body", "msgid")),
+            (r"#[A-Za-z][A-Za-z0-9-]*", Name.Inform, ("body", "msgid")),
+            (r"\n", Text),
         ],
-        'msgid': [
-            (r'(\[)([1-9][0-9]*)(\])',
-             bygroups(Punctuation, Number, Punctuation),
-             '#pop'),
-            default('#pop')
+        "msgid": [
+            (
+                r"(\[)([1-9][0-9]*)(\])",
+                bygroups(Punctuation, Number, Punctuation),
+                "#pop",
+            ),
+            default("#pop"),
         ],
-        'body': [
-            (r'[ \t]*\n', Text, '#pop'),
-            (r'[ \t]+', Text, 'argument'),
+        "body": [
+            (r"[ \t]*\n", Text, "#pop"),
+            (r"[ \t]+", Text, "argument"),
         ],
-        'argument': [
-            (r'(?<=[ \t])(?:0|-?[1-9][0-9]*)(?=[ \t]|$)', Number.Integer),
-            (r'(?<=[ \t])[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?=[ \t]|$)',
-                Number.Float),
-            (r'\\[\\_0nret@]', String.Escape),
-            (r'[^\\ \0\n\r\033\t]+', String),
-            default('#pop')
-        ]
+        "argument": [
+            (r"(?<=[ \t])(?:0|-?[1-9][0-9]*)(?=[ \t]|$)", Number.Integer),
+            (
+                r"(?<=[ \t])[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?=[ \t]|$)",
+                Number.Float,
+            ),
+            (r"\\[\\_0nret@]", String.Escape),
+            (r"[^\\ \0\n\r\033\t]+", String),
+            default("#pop"),
+        ],
     }
 
     def __init__(self, **options):
         super().__init__(**options)
-        self.unescape = options.get('unescape', False)
+        self.unescape = options.get("unescape", False)
 
     def get_tokens_unprocessed(self, text):
         escapes = {
-            r'\\': '\\',
-            r'\_': ' ',
-            r'\n': '\n',
-            r'\@': '',
-            r'\0': '\0',
-            r'\e': '\033',
-            r'\t': '\t',
-            r'\r': '\r'
+            r"\\": "\\",
+            r"\_": " ",
+            r"\n": "\n",
+            r"\@": "",
+            r"\0": "\0",
+            r"\e": "\033",
+            r"\t": "\t",
+            r"\r": "\r",
         }
 
         orig = super().get_tokens_unprocessed(text)
