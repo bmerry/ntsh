@@ -28,6 +28,8 @@ the only supported protocol is
 - Fix to support Python 3.12.
 - Bump minimum Python version to 3.8.
 - Replace setup.py with pyproject.toml.
+- Add a pre-commit configuration.
+- Reformat code with ruff and pyupgrade.
 
 ### 1.1
 
