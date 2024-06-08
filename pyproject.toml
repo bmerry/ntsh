@@ -29,3 +29,8 @@ classifiers = [
 
 [project.scripts]
 ntsh = "ntsh.main:main"
+
+[tool.mypy]
+python_version = "3.8"
+ignore_missing_imports = true
+files = ["src/ntsh"]

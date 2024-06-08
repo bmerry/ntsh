@@ -50,6 +50,7 @@ STYLE = style_from_pygments_dict(
         Token.Number.Float: "#ansigreen",
     }
 )
+LIMIT = 2**20
 
 
 class _Printer:
@@ -59,24 +60,25 @@ class _Printer:
         self._lexer = protocol.input_lexer if is_input else protocol.output_lexer
 
     def __call__(self, text):
-        if self.is_input:
-            pre = [(Token.Generic.Deleted, "< ")]
-        else:
-            pre = [(Token.Generic.Inserted, "> ")]
-        tokens = self._lexer.get_tokens_unprocessed(text)
         out_tokens = []
-        for _, token, data in tokens:
-            parts = data.splitlines(True)
-            for part in parts:
-                if self._bol:
-                    out_tokens.extend(pre)
-                    pre[0] = (pre[0][0], "+ ")  # Continuation line
-                # prompt_toolkit asserts that \r is not present.
-                # To allow for receiving \r\n from the network,
-                # strip out all \r.
-                part = part.replace("\r", "")
-                out_tokens.append((token, part))
-                self._bol = part.endswith("\n")
+        for line in text.splitlines(True):
+            if self.is_input:
+                pre = [(Token.Generic.Deleted, "< ")]
+            else:
+                pre = [(Token.Generic.Inserted, "> ")]
+            tokens = self._lexer.get_tokens_unprocessed(line)
+            for _, token, data in tokens:
+                parts = data.splitlines(True)
+                for part in parts:
+                    if self._bol:
+                        out_tokens.extend(pre)
+                        pre[0] = (pre[0][0], "+ ")  # Continuation line
+                    # prompt_toolkit asserts that \r is not present.
+                    # To allow for receiving \r\n from the network,
+                    # strip out all \r.
+                    part = part.replace("\r", "")
+                    out_tokens.append((token, part))
+                    self._bol = part.endswith("\n")
 
         def printit():
             print_formatted_text(
@@ -100,16 +102,22 @@ class Main:
         printer = _Printer(self.protocol, True)
         decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         eof = False
+        prefix = b""
         while not eof:
-            try:
-                line = await self.reader.readuntil()
-            except asyncio.IncompleteReadError as error:
-                line = error.partial
+            data = await self.reader.read(LIMIT)
+            if data == b"":
                 eof = True
-            except asyncio.LimitOverrunError as error:
-                line = await self.reader.readexactly(error.consumed)
-            text = decoder.decode(line, eof)
-            printer(text)
+            data = prefix + data
+            last_newline = data.rfind(b"\n")
+            if not eof and (len(data) < LIMIT or last_newline != -1):
+                # Cut at a newline, to help any parsing
+                prefix = data[last_newline + 1 :]
+                data = data[: last_newline + 1]
+            else:
+                prefix = b""
+            if data is not None:
+                text = decoder.decode(data, eof)
+                printer(text)
         self.writer.close()
 
     async def _get_input(self):
@@ -199,7 +207,7 @@ async def async_main():
         history = None
 
     try:
-        reader, writer = await asyncio.open_connection(*args.remote, limit=2**20)
+        reader, writer = await asyncio.open_connection(*args.remote, limit=LIMIT)
     except OSError as error:
         print(
             f"Could not connect to {args.remote[0]}:{args.remote[1]}: {error.strerror}",

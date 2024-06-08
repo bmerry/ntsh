@@ -23,13 +23,21 @@ the only supported protocol is
 
 ## Revision history
 
-### 1.1.1
+### 1.1.3
 
 - Fix to support Python 3.12.
 - Bump minimum Python version to 3.8.
 - Replace setup.py with pyproject.toml.
 - Add a pre-commit configuration.
 - Reformat code with ruff and pyupgrade.
+
+### 1.1.2
+
+- Fix output syntax highlight (regression in 1.1.1)
+
+### 1.1.1
+
+- Optimise printing of responses with many lines
 
 ### 1.1
 

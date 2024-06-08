@@ -1,5 +1,5 @@
 # ntsh: an interactive tool for line-based protocols
-# Copyright (C) 2017, 2018  Bruce Merry
+# Copyright (C) 2017, 2018, 2020  Bruce Merry
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from typing import Dict
 
 from prompt_toolkit.lexers import SimpleLexer
 from pygments.lexers.special import TextLexer
@@ -69,7 +71,7 @@ class Argument:
 
 
 class Protocol:
-    ARGS = {}
+    ARGS: Dict[str, Argument] = {}
 
     def __init__(self, name, arglist):
         self.name = name
