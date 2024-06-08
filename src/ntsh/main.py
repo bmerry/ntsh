@@ -202,9 +202,7 @@ async def async_main():
         reader, writer = await asyncio.open_connection(*args.remote, limit=2**20)
     except OSError as error:
         print(
-            "Could not connect to {}:{}: {}".format(
-                args.remote[0], args.remote[1], error.strerror
-            ),
+            f"Could not connect to {args.remote[0]}:{args.remote[1]}: {error.strerror}",
             file=sys.stderr,
         )
         return 1

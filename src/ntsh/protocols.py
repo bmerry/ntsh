@@ -29,9 +29,7 @@ class UnknownProtocolArgument(ProtocolArgumentError):
         self.key = key
 
     def __str__(self):
-        return "'{}' is not a valid argument for protocol {}".format(
-            self.key, self.protocol.name
-        )
+        return f"'{self.key}' is not a valid argument for protocol {self.protocol.name}"
 
 
 class MissingArgumentValue(ProtocolArgumentError):
@@ -41,8 +39,8 @@ class MissingArgumentValue(ProtocolArgumentError):
         self.key = key
 
     def __str__(self):
-        return "Argument '{}' for protocol {} requires a value".format(
-            self.key, self.protocol.name
+        return (
+            f"Argument '{self.key}' for protocol {self.protocol.name} requires a value"
         )
 
 
@@ -54,9 +52,7 @@ class InvalidProtocolArgument(ProtocolArgumentError):
         self.value = value
 
     def __str__(self):
-        return "'{}' is not a valid value for {} in protocol {}".format(
-            self.value, self.key, self.protocol.name
-        )
+        return f"'{self.value}' is not a valid value for {self.key} in protocol {self.protocol.name}"
 
 
 class UnknownProtocolError(ValueError):
@@ -64,15 +60,15 @@ class UnknownProtocolError(ValueError):
         self.name = name
 
     def __str__(self):
-        return "'{}' is not a recognised protocol".format(self.name)
+        return f"'{self.name}' is not a recognised protocol"
 
 
-class Argument(object):
+class Argument:
     def __init__(self, type):
         self.type = type
 
 
-class Protocol(object):
+class Protocol:
     ARGS = {}
 
     def __init__(self, name, arglist):
